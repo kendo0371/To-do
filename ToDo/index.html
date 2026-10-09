@@ -1,0 +1,310 @@
+<!--                                                      -->
+<!--                                                      -->
+<!--                                                      -->
+<!--                                                      -->
+<!-- tailwind ashiglalgui style uudaa JS eer ogson baigaa -->
+<!--                                                      -->
+<!--                                                      -->
+<!--                                                      -->
+<!--                                                      -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @custom-variant dark (&:where(.dark, .dark *));
+    </style>
+    <title>To Do List</title>
+  </head>
+  <body id="body">
+    <div id="container">
+      <h1 id="title"></h1>
+      <div id="head">
+        <input id="search" />
+
+        <select id="category"></select>
+
+        <button id="theme-toggle"></button>
+      </div>
+
+      <div id="tasks"></div>
+
+      <div id="add-btn-c">
+        <button id="add-btn"></button>
+      </div>
+    </div>
+
+    <!--         deed hesegt HTML bga        -->
+    <!--   class uudaa zowhon JS eer ogson   -->
+    <!--                                     -->
+    <!--                                     -->
+    <!--      odoo ene dooroos JS ehelne     -->
+
+    <script>
+      const tasksString = localStorage.getItem("tasks");
+      const tasksArray = JSON.parse(tasksString) || [];
+      const taskBtn = " rounded-full shadow-xl ";
+      const inputStyle = " focus:outline-0 rounded-xl shadow-lg shadow-black ";
+      const addBtn = document.getElementById("add-btn");
+      const tasksEl = document.getElementById("tasks");
+      const themeEl = document.getElementById("theme-toggle");
+      const categoryEl = document.getElementById("category");
+      const searchEl = document.getElementById("search");
+      const titleEl = document.getElementById("title");
+      const bodyEl = document.getElementById("body");
+      const addBtnC = document.getElementById("add-btn-c");
+      const BtnStyle = ` border border-black dark:border-white active:translate-y-1 cursor-pointer
+          bg-cyan-500 dark:bg-purple-600 shadow-lg shadow-black dark:shadow-purple-200 `;
+      const categories = [
+        { value: "all", text: "ALL" },
+        { value: "complete", text: "Complete" },
+        { value: "incomplete", text: "Incomplete" },
+        { value: "deleted", text: "Deleted" },
+      ];
+      const taskCard = ` min-w-150 p-5 border text-xl mt-7 rounded-2xl flex items-center justify-between
+          border-cyan-500 dark:border-purple-600 shadow-lg shadow-black dark:shadow-purple-300 `;
+      let editingIndex = null;
+
+      // render ehelle
+      //
+      function render() {
+        let tasksHTML = "";
+        const searchText = document
+          .getElementById("search")
+          .value.toLowerCase();
+        const category = categoryEl.value;
+
+        tasksArray.forEach(function (task, i) {
+          if (!task.name.toLowerCase().includes(searchText)) {
+            return;
+          }
+
+          if (category === "deleted") {
+            if (!task.deleted) return;
+          } else {
+            if (task.deleted) return;
+            if (category === "complete" && task.status !== "complete") return;
+            if (category === "incomplete" && task.status === "complete") return;
+          }
+
+          if (i === editingIndex) {
+            tasksHTML += `<div class="${taskCard}">
+
+                <input id="edit-input" onKeyDown="editKey(event, ${i})"
+                  class="flex-1 px-3 py-1 bg-transparent focus:outline-0" />
+
+                <div class="flex gap-4">
+
+                  <button class="${BtnStyle + taskBtn + " w-9 h-9"}" onClick="saveEdit(${i})">
+                    ✅
+                  </button>
+
+                  <button class="${BtnStyle + taskBtn + " w-9 h-9"}" onClick="cancelEdit()">
+                    ❌
+                  </button>
+
+                </div>
+
+              </div>`;
+            return;
+          }
+
+          tasksHTML += `<div class="${taskCard} gap-5">
+
+              <label class="flex gap-5 items-center cursor-pointer">
+                <span class="relative flex">
+                  <input class="peer appearance-none size-5 rounded-md cursor-pointer border-2
+                      border-cyan-500 dark:border-purple-600 transition-all duration-300"
+                    type="checkbox" onChange="toggleTask(${i}, this)"
+                    ${task.status === "complete" ? "checked" : ""} />
+
+                  <span class="absolute inset-0 flex items-center text-xs justify-center text-black dark:text-white
+                      pointer-events-none scale-0 peer-checked:scale-100 transition-transform duration-300">
+                    ✓
+                  </span>
+                </span>
+
+                <span class="transition-all duration-300 bg-[linear-gradient(currentColor,currentColor)]
+                    bg-no-repeat bg-[position:0_55%]
+                    ${task.status === "complete" ? "bg-[length:100%_2px] opacity-50" : "bg-[length:0%_2px]"}">
+                  ${task.name}
+                </span>
+              </label>
+
+              <div class="flex gap-4">
+                              
+                <button class="${BtnStyle + taskBtn + " w-9 h-9"}" onClick="deleteTask(${i})">
+                  ${task.deleted ? "↩" : "🗑"}
+                </button>
+
+                <button class="${BtnStyle + taskBtn + " w-9 h-9"}" onClick="editTask(${i})">
+                  ✎
+                </button>
+
+              </div>
+              
+            </div>`;
+        });
+        tasksEl.innerHTML = tasksHTML;
+
+        const editInput = document.getElementById("edit-input");
+
+        if (editInput) {
+          editInput.value = tasksArray[editingIndex].name;
+          editInput.focus();
+        }
+
+        saveTask();
+      }
+      //
+      // render duusaw
+
+      // task duussan eseh
+
+      function toggleTask(index, checkbox) {
+        const task = tasksArray[index];
+        task.status = task.status === "complete" ? "active" : "complete";
+
+        const span = checkbox.parentElement.nextElementSibling;
+        span.classList.toggle("bg-[length:0%_2px]");
+        span.classList.toggle("bg-[length:100%_2px]");
+        span.classList.toggle("opacity-50");
+
+        if (categoryEl.value !== "all") {
+          setTimeout(render, 300);
+        }
+
+        saveTask();
+      }
+
+      // delete hiih heseg
+
+      function deleteTask(index) {
+        const task = tasksArray[index];
+        task.deleted = !task.deleted;
+        render();
+      }
+
+      // edit hiih
+
+      function editTask(index) {
+        editingIndex = index;
+        render();
+      }
+
+      function saveEdit(index) {
+        const name = document.getElementById("edit-input").value.trim();
+        if (!name) return;
+        tasksArray[index].name = name;
+        editingIndex = null;
+        render();
+      }
+
+      function cancelEdit() {
+        editingIndex = null;
+        render();
+      }
+
+      function editKey(event, index) {
+        if (event.key === "Enter") saveEdit(index);
+        if (event.key === "Escape") cancelEdit();
+      }
+
+      // task nemeh towch
+
+      addBtn.addEventListener("click", () => {
+        const name = prompt("New task: ");
+        if (!name || !name.trim()) return;
+        tasksArray.unshift({ name: name.trim(), status: "active" });
+        render();
+      });
+
+      // head
+      document.getElementById("head").className = " flex gap-8 justify-center ";
+
+      // search hiih
+      searchEl.addEventListener("input", render);
+
+      // category goor haih
+      categoryEl.addEventListener("change", render);
+
+      // dark / light mode
+
+      let isDark = false;
+
+      function changeBackGround() {
+        isDark = !isDark;
+        document.documentElement.classList.toggle("dark", isDark);
+        document.getElementById("theme-toggle").textContent = isDark
+          ? "☀️"
+          : "🌙";
+      }
+
+      render();
+
+      // body
+
+      bodyEl.className = ` max-w-3xl mx-auto mt-20 text-xl bg-cyan-50 text-black dark:bg-gray-900
+        dark:text-white text-shadow-lg text-shadow-gray-400 dark:text-shadow-gray-400 `;
+
+      // container
+
+      document.getElementById("container").className = ` flex flex-col `;
+
+      // title
+
+      titleEl.className = ` flex text-center justify-center m-auto text-4xl pb-10 `;
+      titleEl.textContent = "TO DO LIST";
+
+      // search
+
+      searchEl.placeholder = "Search...";
+      searchEl.className =
+        inputStyle +
+        ` px-3 py-1 w-200 border-2 border-cyan-500 dark:border-purple-600
+          dark:bg-gray-800 dark:shadow-purple-300 `;
+      searchEl.type = "search";
+
+      // category
+
+      categoryEl.className =
+        inputStyle +
+        ` border border-black dark:border-white cursor-pointer bg-cyan-500
+          dark:bg-purple-600 dark:shadow-purple-200 appearance-none p-2 font-sans `;
+
+      categories.forEach(function (c) {
+        const option = document.createElement("option");
+        option.value = c.value;
+        option.textContent = c.text;
+        categoryEl.appendChild(option);
+      });
+
+      // theme
+
+      themeEl.className = ` border border-black dark:border-white active:translate-y-1
+          cursor-pointer px-3 py-1 rounded-xl bg-cyan-500 dark:bg-purple-600
+          shadow-lg shadow-black dark:shadow-purple-200 `;
+      themeEl.textContent = "🌙";
+      themeEl.addEventListener("click", changeBackGround);
+
+      // tasks
+
+      tasksEl.className = ` flex flex-col items-center `;
+
+      // add button
+
+      addBtnC.className = `flex justify-end mt-15`;
+
+      addBtn.className =
+        BtnStyle + ` w-15 h-15 text-5xl pb-2 rounded-full text-white `;
+      addBtn.textContent = "+";
+
+      // hadgalah
+      function saveTask() {
+        localStorage.setItem("tasks", JSON.stringify(tasksArray));
+      }
+    </script>
+  </body>
+</html>
